@@ -3,10 +3,12 @@ from app.schemas.user import UserCreate, UserLogin
 from app.database import SessionLocal
 from app.models.user import User
 from pwdlib import PasswordHash
+import jwt
 
 router = APIRouter()
 
 password_hash = PasswordHash.recommended()
+secret_key = "my-super-secret-key"
 
 
 @router.post("/users/register")
@@ -42,10 +44,30 @@ def login_user(user: UserLogin):
 
     if existing_user is None:
         return{
-            "message" : "Invalid emal or password"
+            "message" : "Invalid email "
         }
 
+    password_correct = password_hash.verify(user.password, existing_user.password)
+
+    if not password_correct:
+        return{
+            "message" : "Invalid password"
+        }
+
+    token = jwt.encode(
+        {"user_id" : existing_user.id},
+        secret_key,
+        algorithm="HS256"
+    )
+
+    # return {
+    #     "message": "User Found",
+    #     "user_id": existing_user.id
+    # }
+
     return {
-        "message": "User Found",
-        "user_id": existing_user.id
+        "message": "Password is correct",
+        "user_id": existing_user.id,
+        "access_token": token,
+        "token_type": "bearer"
     }
