@@ -4,11 +4,17 @@ from app.database import SessionLocal
 from app.models.user import User
 from pwdlib import PasswordHash
 import jwt
+import os
+from dotenv import load_dotenv
+from app.auth import verify_token
+from fastapi import Depends
 
+load_dotenv()
 router = APIRouter()
 
+
 password_hash = PasswordHash.recommended()
-secret_key = "my-super-secret-key"
+secret_key = os.getenv("SECRET_KEY")
 
 
 @router.post("/users/register")
@@ -60,14 +66,17 @@ def login_user(user: UserLogin):
         algorithm="HS256"
     )
 
-    # return {
-    #     "message": "User Found",
-    #     "user_id": existing_user.id
-    # }
-
     return {
         "message": "Password is correct",
         "user_id": existing_user.id,
         "access_token": token,
         "token_type": "bearer"
+    }
+
+@router.get("/user/me")
+def get_current_user(payload: dict = Depends(verify_token)) :
+    return {
+        "message" : "You are authenticated",
+        "user_id": payload["user_id"]
+
     }
