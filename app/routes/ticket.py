@@ -32,3 +32,18 @@ def create_ticket(
         "ticket_id": new_ticket.id,
         "user_id": new_ticket.user_id
     }
+
+@router.get("/ticket")
+def get_my_tickets(
+    payload : dict = Depends(verify_token)
+):
+
+    db = SessionLocal()
+
+    tickets = db.query(Ticket).filter(
+        Ticket.user_id == payload["user_id"]
+    ).all()
+
+    db.close()
+
+    return tickets
