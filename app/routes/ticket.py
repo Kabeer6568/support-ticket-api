@@ -47,3 +47,25 @@ def get_my_tickets(
     db.close()
 
     return tickets
+
+@router.get("/ticket/{ticket_id}")
+def get_ticket(
+    ticket_id: int,
+    payload: dict = Depends(verify_token)
+):
+
+    db = SessionLocal()
+
+    ticket = db.query(Ticket).filter(
+        Ticket.id == ticket_id,
+        Ticket.user_id == payload['user_id']
+    ).first()
+
+    db.close()
+
+    if ticket is None:
+        return{
+            "message" : "Ticket Not Found"
+        }
+
+    return ticket
