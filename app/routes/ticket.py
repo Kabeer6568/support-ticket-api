@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.schemas.ticket import TicketCreate
+from app.schemas.ticket import TicketCreate, TicketUpdate
 from app.models import ticket
 from app.database import SessionLocal
 from app.auth import verify_token
@@ -68,4 +68,15 @@ def get_ticket(
             "message" : "Ticket Not Found"
         }
 
-    return ticket
+
+    ticket.status = ticket_update.status
+
+    db.commit()
+    db.refresh(ticket)
+    db.close()
+
+    return {
+        "message": "Ticket updated successfully",
+        "ticket_id": ticket.id,
+        "status": ticket.status
+    }
