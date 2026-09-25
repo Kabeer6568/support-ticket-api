@@ -90,7 +90,7 @@ def update_ticket(
             "message": "Ticket Not Found"
         }
 
-    ticket.status = ticket_update.status
+    ticket.status = ticket_update.status.value
 
     db.commit()
     db.refresh(ticket)
