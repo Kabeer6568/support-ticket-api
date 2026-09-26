@@ -101,3 +101,33 @@ def update_ticket(
         "ticket_id": ticket.id,
         "status": ticket.status
     }
+
+@router.delete("/ticket/{ticket_id}")
+def delete_ticket(
+    ticket_id : int,
+    payload: dict = Depends(verify_token)
+):
+
+    db = SessionLocal()
+
+    ticket = db.query(Ticket).filter(
+        Ticket.id == ticket_id,
+        Ticket.user_id == payload['user_id']
+    ).first()
+
+    if ticket is None:
+
+        db,close()
+
+        return{
+            "message" : "Ticket Not Found"
+        }
+
+    db.delete(ticket)
+    db.commit()
+    db.close()
+
+    return{
+        "message": "Ticket deleted successfully",
+        "ticket_id": ticket_id
+    }
