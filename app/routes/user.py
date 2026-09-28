@@ -26,7 +26,8 @@ def register_user(user: UserCreate):
     new_user = User(
         name=user.name,
         email=user.email,
-        password=hashed_password
+        password=hashed_password,
+        role="user"
     )
 
     db.add(new_user)
@@ -61,7 +62,7 @@ def login_user(user: UserLogin):
         }
 
     token = jwt.encode(
-        {"user_id" : existing_user.id},
+        {"user_id" : existing_user.id,"role": existing_user.role},
         secret_key,
         algorithm="HS256"
     )

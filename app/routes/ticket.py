@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.ticket import TicketCreate, TicketUpdate
 from app.database import SessionLocal
 from app.auth import verify_token
@@ -63,9 +63,10 @@ def get_ticket(
     db.close()
 
     if ticket is None:
-        return {
-            "message": "Ticket Not Found"
-        }
+        raise HTTPException (
+            status_code=404,
+            detail="Ticket Not Fund"
+        )
 
     return ticket
 
@@ -86,9 +87,10 @@ def update_ticket(
     if ticket is None:
         db.close()
 
-        return {
-            "message": "Ticket Not Found"
-        }
+        raise HTTPException (
+            status_code=404,
+            detail="Ticket Not Fund"
+        )
 
     ticket.status = ticket_update.status.value
 
@@ -117,11 +119,12 @@ def delete_ticket(
 
     if ticket is None:
 
-        db,close()
+        db.close()
 
-        return{
-            "message" : "Ticket Not Found"
-        }
+        raise HTTPException (
+            status_code=404,
+            detail="Ticket Not Fund"
+        )
 
     db.delete(ticket)
     db.commit()
