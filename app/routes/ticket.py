@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.ticket import TicketCreate, TicketUpdate
 from app.database import SessionLocal
-from app.auth import verify_token
+from app.auth import verify_token, require_role
 from app.models.ticket import Ticket
 
 
@@ -39,11 +39,16 @@ def get_my_tickets(
 ):
     db = SessionLocal()
 
-    tickets = db.query(Ticket).filter(
-        Ticket.user_id == payload["user_id"]
-    ).all()
+    if payload["role"] in ["admin", "support_agent"]:
 
-    db.close()
+        tickets = db.query(Ticket).all()
+
+    else:    
+        tickets = db.query(Ticket).filter(
+        Ticket.user_id == payload["user_id"]
+        ).all()
+
+        db.close()
 
     return tickets
 
@@ -79,7 +84,14 @@ def update_ticket(
 ):
     db = SessionLocal()
 
-    ticket = db.query(Ticket).filter(
+    if payload["role"] in ["admin", "support_agent"]:
+
+        ticket = db.query(Ticket).filter(
+            Ticket.id == ticket_id
+        ).first()
+
+    else:
+        ticket = db.query(Ticket).filter(
         Ticket.id == ticket_id,
         Ticket.user_id == payload["user_id"]
     ).first()
@@ -107,7 +119,7 @@ def update_ticket(
 @router.delete("/ticket/{ticket_id}")
 def delete_ticket(
     ticket_id : int,
-    payload: dict = Depends(verify_token)
+    payload: dict = Depends(require_role("admin"))
 ):
 
     db = SessionLocal()

@@ -6,7 +6,7 @@ from pwdlib import PasswordHash
 import jwt
 import os
 from dotenv import load_dotenv
-from app.auth import verify_token
+from app.auth import verify_token, require_role
 from fastapi import Depends
 
 load_dotenv()
@@ -80,4 +80,13 @@ def get_current_user(payload: dict = Depends(verify_token)) :
         "message" : "You are authenticated",
         "user_id": payload["user_id"]
 
+    }
+
+@router.get('/user/admin-test')
+def admin_test(
+    payload: dict = Depends(require_role("admin"))
+):
+    return{
+        "message": "You are an admin",
+        "user_id": payload["user_id"]
     }
