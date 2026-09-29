@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from app.schemas.ticket import TicketCreate, TicketUpdate
 from app.database import SessionLocal
 from app.auth import verify_token, require_role
@@ -35,22 +35,43 @@ def create_ticket(
 
 @router.get("/ticket")
 def get_my_tickets(
+    status: str | None = Query(default=None),
+    page: int = Query(default=1 , ge=1),
+    limit: int = Query(default=10, ge=1, le=100),
     payload: dict = Depends(verify_token)
 ):
     db = SessionLocal()
+    query = db.query(Ticket)
 
-    if payload["role"] in ["admin", "support_agent"]:
+#Users can only there tickets
+    if payload["role"] == "user":
+        query = query.filter(
+            Ticket.user_id == payload["user_id"]
+        )
+    
+#filter by status
+    if status is not None:
+        query = query.filter(
+            Ticket.status == status
+        )
 
-        tickets = db.query(Ticket).all()
+#Total number of matching tickets
+    total = query.count()
 
-    else:    
-        tickets = db.query(Ticket).filter(
-        Ticket.user_id == payload["user_id"]
-        ).all()
+#calculate records to skip
+    offset = (page - 1)*limit
 
-        db.close()
+#Get only requested page
+    tickets = query.offset(offset).limit(limit).all()
 
-    return tickets
+    db.close()
+
+    return{
+        "items": tickets,
+        "page": page,
+        "limit": limit,
+        "total": total
+    }
 
 
 @router.get("/ticket/{ticket_id}")
