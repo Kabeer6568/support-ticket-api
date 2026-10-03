@@ -3,7 +3,7 @@ from app.schemas.ticket import TicketCreate, TicketUpdate
 from app.database import SessionLocal
 from app.auth import verify_token, require_role
 from app.models.ticket import Ticket
-
+from app.models.user import User
 
 router = APIRouter()
 
@@ -48,6 +48,10 @@ def get_my_tickets(
         query = query.filter(
             Ticket.user_id == payload["user_id"]
         )
+    elif payload["role"] == "support_agent":
+        query = query.filter(
+        Ticket.assigned_to == payload["user_id"]
+    )
     
 #filter by status
     if status is not None:
@@ -166,4 +170,57 @@ def delete_ticket(
     return{
         "message": "Ticket deleted successfully",
         "ticket_id": ticket_id
+    }
+
+
+@router.patch("/ticket/{ticket_id}/assign")
+def assign_ticket(
+    ticket_id: int,
+    agent_id: int,
+    payload: dict = Depends(require_role("admin"))
+):
+    db = SessionLocal()
+
+    ticket = db.query(Ticket).filter(
+        Ticket.id == ticket_id
+    ).first()
+
+    if ticket is None:
+        db.close()
+
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found"
+        )
+
+    agent = db.query(User).filter(
+        User.id == agent_id
+    ).first()
+
+    if agent is None:
+        db.close()
+
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    if agent.role != "support_agent":
+        db.close()
+
+        raise HTTPException(
+            status_code=400,
+            detail="User is not a support agent"
+        )
+
+    ticket.assigned_to = agent.id
+
+    db.commit()
+    db.refresh(ticket)
+    db.close()
+
+    return {
+        "message": "Ticket assigned successfully",
+        "ticket_id": ticket.id,
+        "assigned_to": ticket.assigned_to
     }

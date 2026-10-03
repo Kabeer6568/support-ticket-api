@@ -9,3 +9,4 @@ class Ticket(Base):
     desc = Column(Text, nullable=False)
     status = Column(String(20), default="open")
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)
