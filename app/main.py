@@ -1,12 +1,15 @@
 from fastapi import FastAPI
 from app.database import engine, Base
 from app.models.user import User
-from app.models.ticket import Ticket
 # from app.routes import ticket
+from app.models.ticket import Ticket
+from app.models.comment import Comment
+
 
 Base.metadata.create_all(bind=engine)
 from app.routes import user
 from app.routes import ticket
+from app.routes.comment import router as comment_router
 
 app = FastAPI(
     title="Support Ticket API",
@@ -15,6 +18,7 @@ app = FastAPI(
 )
 app.include_router(user.router)
 app.include_router(ticket.router)
+app.include_router(comment_router)
 
 @app.get("/")
 def home():
