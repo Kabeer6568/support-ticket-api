@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from app.schemas.user import UserCreate, UserLogin, UserResponse, TokenResponse
+from app.schemas.user import UserCreate, UserLogin, UserResponse, TokenResponse, UserRoleUpdate
 from app.database import SessionLocal
 from app.models.user import User
 from pwdlib import PasswordHash
@@ -119,4 +119,36 @@ def admin_test(
     return{
         "message": "You are an admin",
         "user_id": payload["user_id"]
+    }
+
+
+@router.patch("/users/{user_id}/role")
+def update_user_role(
+    user_id: int,
+    role_update: UserRoleUpdate,
+    payload: dict = Depends(require_role("admin"))
+):
+    db = SessionLocal()
+
+    user = db.query(User).filter(
+        User.id == user_id
+    ).first()
+
+    if user is None:
+        db.close()
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    user.role = role_update.role.value
+
+    db.commit()
+    db.refresh(user)
+    db.close()
+
+    return {
+        "message": "User role updated successfully",
+        "user_id": user.id,
+        "role": user.role
     }

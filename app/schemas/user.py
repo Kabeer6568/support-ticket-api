@@ -1,4 +1,6 @@
 from pydantic import BaseModel, EmailStr
+from enum import Enum
+
 
 
 class UserCreate(BaseModel):
@@ -20,3 +22,12 @@ class UserResponse(BaseModel):
     name: str
     email: EmailStr
     role: str
+
+class UserRole(str, Enum):
+    user = "user"
+    support_agent = "support_agent"
+    admin = "admin"
+
+
+class UserRoleUpdate(BaseModel):
+    role: UserRole
