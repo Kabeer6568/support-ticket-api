@@ -1,25 +1,34 @@
 import os
+import time
 
 from dotenv import load_dotenv
-from openai import OpenAI
+from google import genai
+from google.genai import errors
 
 load_dotenv()
 
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY")
-)
 
-def generate_ai_response(conversation: str) -> str:
+def generate_ai_response(prompt: str):
 
-    response = client.responses.create(
-        model="gpt-6-luna",
-        instructions=(
-            "You are an AI customer support assistant. "
-            "Be helpful, concise, and professional. "
-            "If you do not have enough information to confidently "
-            "solve the customer's problem, say that you need human support."
-        ),
-        input=conversation
+    client = genai.Client(
+        api_key=os.getenv("GEMINI_API_KEY")
     )
 
-    return response.output_text
+    max_retries = 3
+
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model="gemini-3.6-flash",
+                contents=prompt
+            )
+
+            return response.text
+
+        except errors.ServerError as e:
+
+            if attempt == max_retries - 1:
+                raise e
+
+            wait_time = 2 ** attempt
+            time.sleep(wait_time)
