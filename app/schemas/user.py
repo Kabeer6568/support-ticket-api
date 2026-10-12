@@ -1,6 +1,6 @@
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class UserCreate(BaseModel):
@@ -26,6 +26,18 @@ class UserResponse(BaseModel):
     name: str
     email: EmailStr
     role: str
+
+    @field_validator("role", mode="before")
+    @classmethod
+    def default_missing_role_to_customer(cls, value: str | None) -> str:
+        return "user" if value is None else value
+
+
+class UserPageResponse(BaseModel):
+    items: list[UserResponse]
+    page: int
+    limit: int
+    total: int
 
 
 class UserRole(str, Enum):

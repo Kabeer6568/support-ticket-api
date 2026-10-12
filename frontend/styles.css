@@ -189,6 +189,16 @@ button { cursor: pointer; }
 .compact-form .button { justify-self: start; margin-top: 3px; }
 .admin-note { display: flex; gap: 9px; align-items: flex-start; margin: 17px 3px; color: #8995a4; font-size: 10px; line-height: 1.6; }
 .admin-note span { display: grid; place-items: center; flex: 0 0 17px; height: 17px; color: #5470cf; border-radius: 50%; background: #e9efff; font-weight: 700; }
+.directory-panel { margin-top: 18px; }
+.directory-filters { margin-bottom: 12px; }
+.directory-count { color: #8995a4; font-size: 10px; }
+.directory-table-wrap { overflow-x: auto; }
+.directory-table { width: 100%; border-collapse: collapse; text-align: left; }
+.directory-table th { padding: 10px 12px; color: #9aa4b1; border-bottom: 1px solid var(--line); font-size: 9px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; }
+.directory-table td { padding: 12px; color: #667488; border-bottom: 1px solid #eff2f6; font-size: 10px; }
+.directory-table tr:last-child td { border-bottom: 0; }
+.directory-user { display: flex; align-items: center; gap: 9px; color: #334257; font-size: 11px; font-weight: 700; }
+.directory-avatar { display: grid; place-items: center; flex: 0 0 29px; width: 29px; height: 29px; color: #5167bb; background: #e9edfc; border-radius: 50%; font-size: 9px; }
 .app-footer { display: flex; justify-content: space-between; max-width: 1140px; margin: 38px auto 0; padding: 17px 0 22px; color: #a1aab6; border-top: 1px solid var(--line); font-size: 9px; }
 .app-footer b { color: #6dbf98; }
 
@@ -297,6 +307,7 @@ button { cursor: pointer; }
   .form-panel { padding: 17px; }
   .form-actions { align-items: flex-start; flex-direction: column; }
   .admin-grid { grid-template-columns: 1fr; }
+  .directory-table th, .directory-table td { padding: 10px 8px; }
   .app-footer { gap: 10px; font-size: 8px; }
   .dialog-header { padding: 15px; }
   .dialog-body { padding: 15px; }

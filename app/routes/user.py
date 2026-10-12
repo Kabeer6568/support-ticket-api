@@ -2,13 +2,22 @@
 
 import jwt
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import or_
 from pwdlib import PasswordHash
 
 from app.auth import require_role, verify_token
 from app.database import SessionLocal
 from app.models.user import User
-from app.schemas.user import TokenResponse, UserCreate, UserLogin, UserResponse, UserRoleUpdate
+from app.schemas.user import (
+    TokenResponse,
+    UserCreate,
+    UserLogin,
+    UserPageResponse,
+    UserResponse,
+    UserRole,
+    UserRoleUpdate,
+)
 
 load_dotenv()
 router = APIRouter()
@@ -84,6 +93,38 @@ def get_current_user(payload: dict = Depends(verify_token)):
         raise HTTPException(status_code=404, detail="User not found")
 
     return current_user
+
+
+@router.get("/users", response_model=UserPageResponse)
+def list_users(
+    role: UserRole | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=25, ge=1, le=100),
+    payload: dict = Depends(require_role("admin")),
+):
+    db = SessionLocal()
+    query = db.query(User)
+    if role is not None:
+        role_filter = User.role == role.value
+        if role == UserRole.user:
+            role_filter = or_(role_filter, User.role.is_(None))
+        query = query.filter(role_filter)
+
+    total = query.count()
+    users = (
+        query.order_by(User.id.asc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+    result = {
+        "items": users,
+        "page": page,
+        "limit": limit,
+        "total": total,
+    }
+    db.close()
+    return result
 
 
 @router.get("/user/admin-test")

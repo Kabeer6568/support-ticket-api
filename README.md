@@ -29,6 +29,7 @@ The system allows customers/users to create and manage support tickets, while ad
 * Change ticket priority
 * Reply to users
 * Assign/manage tickets
+* Browse and filter a paginated directory of customers, support agents, and admins
 
 ## Technology Stack
 
@@ -160,7 +161,7 @@ current user-facing features:
 * Ticket conversations, replies, and automatic AI triage when a ticket is created
 * Automatic ticket resolution for confident, non-urgent requests; serious, sensitive,
   uncertain, or AI-unavailable cases are assigned to a randomly selected support agent
-* Admin ticket assignment, deletion, and user-role changes
+* Admin ticket assignment, deletion, user-role changes, and a paginated directory of customers, support agents, and admins
 * Configurable API URL, database health check, and admin-access check
 
 Start the API from the repository root:
@@ -199,8 +200,9 @@ FRONTEND_ORIGINS=http://localhost:5500,http://127.0.0.1:5500
 ```
 
 Admin-only tools require signing in as an admin. Assignment and role-management
-forms use numeric IDs because the API currently has no endpoint to list users
-or support agents.
+forms use numeric IDs. Administrators can browse and filter the paginated user
+directory in Admin tools; it never exposes password hashes. The directory API is
+`GET /users` and supports `role`, `page`, and `limit` query parameters.
 
 New tickets are reviewed by Gemini before the create request completes. When the
 model returns a valid, high-confidence safe resolution, the ticket is marked

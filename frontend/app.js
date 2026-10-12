@@ -17,6 +17,8 @@ const state = {
   tickets: [],
   page: 1,
   total: 0,
+  usersPage: 1,
+  usersTotal: 0,
   statusFilter: "",
   selectedTicket: null,
   comments: [],
@@ -218,6 +220,7 @@ function showView(view) {
   });
   const labels = { overview: "Overview", tickets: "Tickets", "new-ticket": "New ticket", admin: "Admin tools" };
   byId("page-label").textContent = labels[view] || "Overview";
+  if (view === "admin") void loadUsers();
 }
 
 function makeTicketRow(ticket) {
@@ -538,10 +541,71 @@ async function updateRole(form) {
     });
     showToast(`User #${result.user_id} is now ${prettyRole(result.role)}.`);
     form.reset();
+    await loadUsers();
   } catch (error) {
     showToast(error.message, "error");
   } finally {
     setBusy(submit, false);
+  }
+}
+
+function renderUserDirectory(users) {
+  const body = byId("user-directory-body");
+  const rows = users.map((user) => {
+    const row = document.createElement("tr");
+    const nameCell = document.createElement("td");
+    const name = document.createElement("span");
+    name.className = "directory-user";
+    const avatar = document.createElement("span");
+    avatar.className = "directory-avatar";
+    avatar.textContent = initials(user.name);
+    const label = document.createElement("span");
+    label.textContent = user.name;
+    name.append(avatar, label);
+    nameCell.append(name);
+
+    const email = document.createElement("td");
+    email.textContent = user.email;
+    const role = document.createElement("td");
+    const badge = document.createElement("span");
+    badge.className = "role-badge";
+    badge.textContent = prettyRole(user.role);
+    role.append(badge);
+    const id = document.createElement("td");
+    id.textContent = `#${user.id}`;
+    row.append(nameCell, email, role, id);
+    return row;
+  });
+  body.replaceChildren(...rows);
+}
+
+async function loadUsers() {
+  const refresh = byId("refresh-users");
+  setBusy(refresh, true, "Loading…");
+  const query = new URLSearchParams({
+    page: String(state.usersPage),
+    limit: "25",
+  });
+  const role = byId("user-role-filter").value;
+  if (role) query.set("role", role);
+
+  try {
+    const result = await request(`/users?${query.toString()}`);
+    const users = Array.isArray(result.items) ? result.items : [];
+    state.usersPage = Number(result.page) || state.usersPage;
+    state.usersTotal = Number(result.total) || 0;
+    renderUserDirectory(users);
+    byId("users-empty").classList.toggle("hidden", users.length > 0);
+    byId("user-count").textContent = `${state.usersTotal} ${state.usersTotal === 1 ? "person" : "people"}`;
+    const first = state.usersTotal === 0 ? 0 : (state.usersPage - 1) * 25 + 1;
+    const last = Math.min(state.usersPage * 25, state.usersTotal);
+    byId("users-page-summary").textContent = `Showing ${first}–${last} of ${state.usersTotal}`;
+    byId("users-page-prev").disabled = state.usersPage <= 1;
+    byId("users-page-next").disabled = last >= state.usersTotal;
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    setBusy(refresh, false);
   }
 }
 
@@ -638,6 +702,23 @@ function bindEvents() {
     void updateRole(event.currentTarget);
   });
   byId("admin-check").addEventListener("click", () => void checkAdminAccess());
+  byId("refresh-users").addEventListener("click", () => void loadUsers());
+  byId("user-role-filter").addEventListener("change", () => {
+    state.usersPage = 1;
+    void loadUsers();
+  });
+  byId("users-page-prev").addEventListener("click", () => {
+    if (state.usersPage > 1) {
+      state.usersPage -= 1;
+      void loadUsers();
+    }
+  });
+  byId("users-page-next").addEventListener("click", () => {
+    if (state.usersPage * 25 < state.usersTotal) {
+      state.usersPage += 1;
+      void loadUsers();
+    }
+  });
 }
 
 bindEvents();

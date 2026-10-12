@@ -128,7 +128,14 @@
           <section class="panel admin-card"><div class="admin-card-icon">↗</div><p class="eyebrow muted-eyebrow">TICKET MANAGEMENT</p><h2>Assign a ticket</h2><p>Assign a ticket to a support agent using their user ID.</p><form id="assign-form" class="form-stack compact-form"><label>Ticket ID<input name="ticket_id" type="number" min="1" required placeholder="e.g. 12"></label><label>Support agent user ID<input name="agent_id" type="number" min="1" required placeholder="e.g. 4"></label><button class="button button-primary" type="submit">Assign ticket <span>→</span></button></form></section>
           <section class="panel admin-card"><div class="admin-card-icon role-icon">♙</div><p class="eyebrow muted-eyebrow">TEAM ACCESS</p><h2>Change a user role</h2><p>Promote an existing account to support agent or admin.</p><form id="role-form" class="form-stack compact-form"><label>User ID<input name="user_id" type="number" min="1" required placeholder="e.g. 8"></label><label>New role<select name="role" required><option value="user">Customer</option><option value="support_agent">Support agent</option><option value="admin">Admin</option></select></label><button class="button button-primary" type="submit">Update role <span>→</span></button></form></section>
         </div>
-        <p class="admin-note"><span>i</span> User and agent IDs are shown in account registration responses and ticket details. Only existing users can be assigned a role.</p>
+        <section class="panel directory-panel">
+          <div class="panel-heading"><div><p class="eyebrow muted-eyebrow">PEOPLE</p><h2>User directory</h2></div><button id="refresh-users" class="button button-quiet" type="button">↻ Refresh</button></div>
+          <div class="filter-row directory-filters"><label class="filter-select-label">Show<select id="user-role-filter"><option value="">Everyone</option><option value="user">Customers</option><option value="support_agent">Support agents</option><option value="admin">Admins</option></select></label><span id="user-count" class="directory-count">—</span></div>
+          <div class="directory-table-wrap"><table class="directory-table"><thead><tr><th>User</th><th>Email</th><th>Role</th><th>ID</th></tr></thead><tbody id="user-directory-body"></tbody></table></div>
+          <div id="users-empty" class="empty-state hidden"><span class="empty-icon">♙</span><h3>No users in this view</h3><p>Try another role filter.</p></div>
+          <div class="pagination"><span id="users-page-summary">—</span><div><button id="users-page-prev" class="button button-quiet" type="button">← Previous</button><button id="users-page-next" class="button button-quiet" type="button">Next →</button></div></div>
+        </section>
+        <p class="admin-note"><span>i</span> The directory displays user IDs needed for assigning tickets and changing roles.</p>
       </section>
       <footer class="app-footer"><span>Resolve support desk</span><span>Made for better conversations <b>✳</b></span></footer>
     </main>
