@@ -322,11 +322,31 @@ async function openTicket(ticketId) {
     byId("status-control").classList.toggle("hidden", state.user.role === "user");
     byId("delete-ticket").classList.toggle("hidden", state.user.role !== "admin");
     byId("reply-message").value = "";
-    await loadComments(ticket.id);
+    await Promise.all([loadComments(ticket.id), loadTicketTriage(ticket.id)]);
     dialog.showModal();
   } catch (error) {
     showToast(error.message, "error");
   }
+}
+
+async function loadTicketTriage(ticketId) {
+  const triage = await request(`/ticket/${ticketId}/triage`);
+  const panel = byId("triage-result");
+  if (!triage) {
+    panel.classList.add("hidden");
+    return;
+  }
+  const escalated = triage.outcome === "escalated";
+  panel.classList.toggle("escalated", escalated);
+  panel.classList.remove("hidden");
+  byId("triage-icon").textContent = escalated ? "↗" : "✦";
+  byId("triage-title").textContent = escalated
+    ? triage.assigned_to
+      ? `Escalated to support agent #${triage.assigned_to}`
+      : "Waiting for admin assignment"
+    : "AI resolved this ticket";
+  byId("triage-reason").textContent = triage.reason;
+  byId("triage-response").textContent = triage.response;
 }
 
 async function loadComments(ticketId) {
@@ -400,13 +420,18 @@ async function submitRegistration(form) {
 
 async function submitTicket(form) {
   const submit = form.querySelector("button[type=submit]");
-  setBusy(submit, true, "Submitting…");
+  setBusy(submit, true, "AI reviewing…");
   try {
     const values = Object.fromEntries(new FormData(form));
     const result = await request("/ticket", { method: "POST", body: JSON.stringify(values) });
     form.reset();
     state.page = 1;
-    showToast(`Ticket #${result.id} created.`);
+    const outcomeMessage = result.ai_outcome === "resolved"
+      ? "The AI resolved your issue."
+      : result.assigned_to
+        ? `A support agent (#${result.assigned_to}) has been assigned.`
+        : "Your ticket is waiting for an administrator to assign an agent.";
+    showToast(`Ticket #${result.id} created. ${outcomeMessage}`);
     await loadTickets();
     showView("tickets");
     await openTicket(result.id);

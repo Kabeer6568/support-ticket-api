@@ -202,6 +202,15 @@ button { cursor: pointer; }
 .detail-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .detail-owner { color: #8894a4; font-size: 10px; }
 .ticket-description { margin: 16px 0; padding: 13px 14px; color: #647186; background: #f7f9fc; border-radius: 8px; font-size: 12px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.triage-result { margin: 15px 0; padding: 14px; color: #436b59; background: #eff8f3; border: 1px solid #e1f0e7; border-radius: 9px; }
+.triage-result.escalated { color: #826331; background: #fff8e9; border-color: #f2e8d0; }
+.triage-result-heading { display: flex; align-items: flex-start; gap: 9px; }
+.triage-result-heading > span { font-size: 17px; }
+.triage-result-heading b, .triage-result-heading small { display: block; }
+.triage-result-heading b { font-size: 11px; }
+.triage-result-heading small { margin-top: 4px; color: #8b9a91; font-size: 9px; }
+.triage-result > p { margin: 11px 0 0 26px; color: #5d7065; font-size: 11px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.triage-result.escalated .triage-result-heading small, .triage-result.escalated > p { color: #8d7854; }
 .detail-actions { display: flex; align-items: end; gap: 9px; flex-wrap: wrap; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
 .status-control { width: 150px; font-size: 10px; }
 .status-control select { padding: 9px; font-size: 10px; }

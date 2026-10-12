@@ -117,7 +117,7 @@
         <section class="panel form-panel"><form id="ticket-form" class="form-stack">
           <label>Subject<input name="title" type="text" minlength="3" maxlength="200" placeholder="A short summary of your issue" required><small>Keep it clear and specific.</small></label>
           <label>How can we help?<textarea name="desc" rows="7" maxlength="5000" placeholder="Share any details that will help us understand the issue…" required></textarea><small>Up to 5,000 characters.</small></label>
-          <div class="form-actions"><button class="button button-primary" type="submit">Submit ticket <span>→</span></button><span class="form-note">You can add replies and details after submitting.</span></div>
+          <div class="form-actions"><button class="button button-primary" type="submit">Submit ticket <span>→</span></button><span class="form-note">AI will review your issue first and either resolve it or send it to support.</span></div>
         </form></section>
       </section>
 
@@ -139,6 +139,7 @@
     <div class="dialog-body">
       <div class="detail-meta"><span id="dialog-status" class="status-badge">Pending</span><span id="dialog-owner" class="detail-owner"></span><span id="dialog-assignee" class="detail-owner"></span></div>
       <p id="dialog-description" class="ticket-description"></p>
+      <section id="triage-result" class="triage-result hidden"><div class="triage-result-heading"><span id="triage-icon">✦</span><div><b id="triage-title">AI review</b><small id="triage-reason"></small></div></div><p id="triage-response"></p></section>
       <div class="detail-actions">
         <label id="status-control" class="status-control">Update status<select id="ticket-status"><option value="pending">Pending</option><option value="open">Open</option><option value="on_hold">On hold</option><option value="resolved">Resolved</option><option value="discarded">Discarded</option></select></label>
         <button id="ai-button" class="button button-ai" type="button">✦ Suggest an AI reply</button>

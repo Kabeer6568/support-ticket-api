@@ -1,17 +1,25 @@
-﻿from fastapi import APIRouter, Depends, HTTPException, Query, status
+import logging
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func
+
+from app.ai.service import AIServiceError, TicketTriage, triage_ticket
 from app.auth import require_role, verify_token
 from app.database import SessionLocal
 from app.models.ticket import Ticket
+from app.models.ticket_triage import TicketTriageResult
 from app.models.user import User
+from app.schemas.ai import TicketTriageResponse
 from app.schemas.ticket import (
     TicketCreate,
+    TicketCreateResponse,
     TicketPageResponse,
     TicketResponse,
     TicketUpdate,
 )
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def can_access_ticket(payload: dict, ticket: Ticket) -> bool:
@@ -27,7 +35,11 @@ def can_access_ticket(payload: dict, ticket: Ticket) -> bool:
     return False
 
 
-@router.post("/ticket", response_model=TicketResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/ticket",
+    response_model=TicketCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_ticket(ticket: TicketCreate, payload: dict = Depends(verify_token)):
     db = SessionLocal()
 
@@ -37,13 +49,83 @@ def create_ticket(ticket: TicketCreate, payload: dict = Depends(verify_token)):
         user_id=payload["user_id"],
         status="pending",
     )
-
     db.add(new_ticket)
     db.commit()
     db.refresh(new_ticket)
+    ticket_id = new_ticket.id
     db.close()
 
-    return new_ticket
+    try:
+        triage = triage_ticket(ticket.title, ticket.desc)
+    except AIServiceError as exc:
+        logger.warning("AI triage unavailable for ticket %s: %s", ticket_id, exc)
+        triage = TicketTriage(
+            decision="escalate",
+            response=(
+                "I couldn't safely resolve this automatically, so I'm sending "
+                "your ticket to the support team."
+            ),
+            reason="AI triage was unavailable; a human review is required.",
+            confidence=0.0,
+        )
+
+    db = SessionLocal()
+    created_ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if created_ticket is None:
+        db.close()
+        raise HTTPException(status_code=500, detail="Created ticket could not be loaded")
+
+    assigned_agent = None
+    outcome = "resolved"
+    if triage.decision == "resolve":
+        created_ticket.status = "resolved"
+    else:
+        outcome = "escalated"
+        assigned_agent = (
+            db.query(User)
+            .filter(User.role == "support_agent")
+            .order_by(func.random())
+            .first()
+        )
+        created_ticket.status = "open"
+        if assigned_agent is not None:
+            created_ticket.assigned_to = assigned_agent.id
+        else:
+            triage = TicketTriage(
+                decision="escalate",
+                response=(
+                    "I couldn't safely resolve this automatically. No support "
+                    "agents are currently available, so an administrator will "
+                    "need to assign your ticket."
+                ),
+                reason="No support agents are registered; admin assignment is required.",
+                confidence=triage.confidence,
+            )
+
+    triage_record = TicketTriageResult(
+        ticket_id=ticket_id,
+        outcome=outcome,
+        response=triage.response,
+        reason=triage.reason,
+        confidence=triage.confidence,
+    )
+    db.add(triage_record)
+    db.commit()
+    db.refresh(created_ticket)
+    response = {
+        "id": created_ticket.id,
+        "title": created_ticket.title,
+        "desc": created_ticket.desc,
+        "status": created_ticket.status,
+        "user_id": created_ticket.user_id,
+        "assigned_to": created_ticket.assigned_to,
+        "ai_outcome": outcome,
+        "ai_response": triage.response,
+        "ai_reason": triage.reason,
+        "ai_confidence": triage.confidence,
+    }
+    db.close()
+    return response
 
 
 @router.get("/ticket", response_model=TicketPageResponse)
@@ -94,6 +176,42 @@ def get_ticket(ticket_id: int, payload: dict = Depends(verify_token)):
         raise HTTPException(status_code=403, detail="You do not have access to this ticket")
 
     return ticket
+
+
+@router.get(
+    "/ticket/{ticket_id}/triage",
+    response_model=TicketTriageResponse | None,
+)
+def get_ticket_triage(ticket_id: int, payload: dict = Depends(verify_token)):
+    db = SessionLocal()
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    if ticket is None:
+        db.close()
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    if not can_access_ticket(payload, ticket):
+        db.close()
+        raise HTTPException(status_code=403, detail="You do not have access to this ticket")
+
+    triage = (
+        db.query(TicketTriageResult)
+        .filter(TicketTriageResult.ticket_id == ticket_id)
+        .first()
+    )
+    if triage is None:
+        db.close()
+        return None
+
+    result = {
+        "outcome": triage.outcome,
+        "response": triage.response,
+        "reason": triage.reason,
+        "confidence": triage.confidence,
+        "assigned_to": ticket.assigned_to,
+        "created_at": triage.created_at,
+    }
+    db.close()
+    return result
 
 
 @router.patch("/ticket/{ticket_id}", response_model=TicketResponse)

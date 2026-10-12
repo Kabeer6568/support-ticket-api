@@ -36,3 +36,10 @@ class TicketPageResponse(BaseModel):
     page: int
     limit: int
     total: int
+
+
+class TicketCreateResponse(TicketResponse):
+    ai_outcome: str
+    ai_response: str
+    ai_reason: str
+    ai_confidence: float

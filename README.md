@@ -157,7 +157,9 @@ current user-facing features:
 
 * Account registration, login, profile display, and sign out
 * Role-aware ticket listing, status filtering, pagination, creation, and status updates
-* Ticket conversations, replies, and AI-generated reply suggestions
+* Ticket conversations, replies, and automatic AI triage when a ticket is created
+* Automatic ticket resolution for confident, non-urgent requests; serious, sensitive,
+  uncertain, or AI-unavailable cases are assigned to a randomly selected support agent
 * Admin ticket assignment, deletion, and user-role changes
 * Configurable API URL, database health check, and admin-access check
 
@@ -199,6 +201,15 @@ FRONTEND_ORIGINS=http://localhost:5500,http://127.0.0.1:5500
 Admin-only tools require signing in as an admin. Assignment and role-management
 forms use numeric IDs because the API currently has no endpoint to list users
 or support agents.
+
+New tickets are reviewed by Gemini before the create request completes. When the
+model returns a valid, high-confidence safe resolution, the ticket is marked
+`resolved` and the response is shown in the ticket details. Urgent or sensitive
+issues, low-confidence results, invalid AI output, and provider failures are
+escalated. Escalated tickets are marked `open` and randomly assigned to a
+registered `support_agent`. If no support agents exist, the ticket remains open
+and an administrator is told to assign it. AI triage results are stored in the
+`ticket_triage_results` table, which is created automatically at startup.
 
 ## Project Architecture
 
