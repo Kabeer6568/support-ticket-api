@@ -1,34 +1,61 @@
+import logging
 import os
 import time
 
+import httpx
 from dotenv import load_dotenv
 from google import genai
 from google.genai import errors
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 
-def generate_ai_response(prompt: str):
+class AIServiceError(RuntimeError):
+    """Raised when the AI provider cannot complete a request."""
 
-    client = genai.Client(
-        api_key=os.getenv("GEMINI_API_KEY")
-    )
 
+def get_ai_client() -> genai.Client:
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY is missing")
+
+    return genai.Client(api_key=api_key)
+
+
+def generate_ai_response(prompt: str) -> str:
+    if not prompt or not prompt.strip():
+        raise ValueError("Prompt cannot be empty")
+
+    client = get_ai_client()
+    model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
     max_retries = 3
 
-    for attempt in range(max_retries):
+    for attempt in range(1, max_retries + 1):
         try:
             response = client.models.generate_content(
-                model="gemini-3.6-flash",
+                model=model_name,
                 contents=prompt
             )
 
-            return response.text
+            text = getattr(response, "text", None)
+            if text:
+                return text
 
-        except errors.ServerError as e:
+            raise ValueError("AI returned an empty response")
 
-            if attempt == max_retries - 1:
-                raise e
+        except (
+            errors.ServerError,
+            errors.ClientError,
+            errors.APIError,
+            httpx.TransportError,
+        ) as e:
+            logger.warning("AI request failed (attempt %s/%s): %s", attempt, max_retries, e)
 
-            wait_time = 2 ** attempt
+            if attempt == max_retries:
+                raise AIServiceError("AI request failed after retries") from e
+
+            wait_time = 2 ** (attempt - 1)
             time.sleep(wait_time)
+
+    raise AIServiceError("AI request failed after retries")

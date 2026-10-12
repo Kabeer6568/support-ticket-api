@@ -1,5 +1,7 @@
-from sqlalchemy import Integer, String, Column, Text, ForeignKey
+from sqlalchemy import Column, ForeignKey, Integer, String, Text
+
 from app.database import Base
+
 
 class Ticket(Base):
     __tablename__ = "tickets"
@@ -7,6 +9,6 @@ class Ticket(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(200), nullable=False)
     desc = Column(Text, nullable=False)
-    status = Column(String(20), default="open")
+    status = Column(String(20), default="pending", nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)

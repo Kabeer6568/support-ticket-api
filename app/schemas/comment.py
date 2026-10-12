@@ -1,10 +1,11 @@
-from datetime import datetime
+﻿from datetime import datetime
+from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class CommentCreate(BaseModel):
-    message: str
+    message: str = Field(..., min_length=1, max_length=5000)
 
 
 class CommentResponse(BaseModel):
