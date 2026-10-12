@@ -1,6 +1,6 @@
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TicketCreate(BaseModel):
@@ -21,9 +21,18 @@ class TicketUpdate(BaseModel):
 
 
 class TicketResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     title: str
     desc: str
     status: str
     user_id: int
     assigned_to: int | None = None
+
+
+class TicketPageResponse(BaseModel):
+    items: list[TicketResponse]
+    page: int
+    limit: int
+    total: int

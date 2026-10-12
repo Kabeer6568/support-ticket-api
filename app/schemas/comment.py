@@ -1,7 +1,7 @@
 ﻿from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CommentCreate(BaseModel):
@@ -9,6 +9,8 @@ class CommentCreate(BaseModel):
 
 
 class CommentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     message: str
     user_id: int

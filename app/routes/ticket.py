@@ -4,7 +4,12 @@ from app.auth import require_role, verify_token
 from app.database import SessionLocal
 from app.models.ticket import Ticket
 from app.models.user import User
-from app.schemas.ticket import TicketCreate, TicketResponse, TicketUpdate
+from app.schemas.ticket import (
+    TicketCreate,
+    TicketPageResponse,
+    TicketResponse,
+    TicketUpdate,
+)
 
 router = APIRouter()
 
@@ -41,7 +46,7 @@ def create_ticket(ticket: TicketCreate, payload: dict = Depends(verify_token)):
     return new_ticket
 
 
-@router.get("/ticket", response_model=dict)
+@router.get("/ticket", response_model=TicketPageResponse)
 def get_my_tickets(
     status: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),

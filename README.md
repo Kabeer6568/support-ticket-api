@@ -150,6 +150,56 @@ could return:
 }
 ```
 
+## Frontend
+
+The plain HTML/CSS/JavaScript frontend lives in `frontend/` and covers the API's
+current user-facing features:
+
+* Account registration, login, profile display, and sign out
+* Role-aware ticket listing, status filtering, pagination, creation, and status updates
+* Ticket conversations, replies, and AI-generated reply suggestions
+* Admin ticket assignment, deletion, and user-role changes
+* Configurable API URL, database health check, and admin-access check
+
+Start the API from the repository root:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+```
+
+If you use Git Bash, activate the virtual environment with
+`source .venv/Scripts/activate` and run:
+
+```bash
+python -m uvicorn app.main:app --reload
+```
+
+In another terminal, serve the static frontend:
+
+```powershell
+.\.venv\Scripts\python.exe -m http.server 5500 --directory frontend
+```
+
+In Git Bash, with the virtual environment activated, use:
+
+```bash
+python -m http.server 5500 --directory frontend
+```
+
+Open `http://127.0.0.1:5500`. The frontend defaults to the API at
+`http://127.0.0.1:8000`; change the API server field on the sign-in page if
+your API uses a different address. The API permits these local frontend origins
+by default. To use another origin, set `FRONTEND_ORIGINS` in `.env` to a
+comma-separated list of exact origins, for example:
+
+```text
+FRONTEND_ORIGINS=http://localhost:5500,http://127.0.0.1:5500
+```
+
+Admin-only tools require signing in as an admin. Assignment and role-management
+forms use numeric IDs because the API currently has no endpoint to list users
+or support agents.
+
 ## Project Architecture
 
 As the project grows, the code will be separated into different responsibilities.
