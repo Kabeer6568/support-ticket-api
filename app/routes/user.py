@@ -1,12 +1,11 @@
-﻿import os
+from datetime import datetime, timedelta, timezone
 
 import jwt
-from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_
 from pwdlib import PasswordHash
 
-from app.auth import require_role, verify_token
+from app.auth import ACCESS_TOKEN_EXPIRE_MINUTES, require_role, secret_key, verify_token
 from app.database import SessionLocal
 from app.models.user import User
 from app.schemas.user import (
@@ -19,13 +18,9 @@ from app.schemas.user import (
     UserRoleUpdate,
 )
 
-load_dotenv()
 router = APIRouter()
 
 password_hash = PasswordHash.recommended()
-secret_key = os.getenv("SECRET_KEY")
-if not secret_key:
-    raise RuntimeError("SECRET_KEY is not set. Add it to your .env file.")
 
 
 @router.post("/users/register", response_model=dict, status_code=status.HTTP_201_CREATED)
@@ -71,7 +66,12 @@ def login_user(user: UserLogin):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     token = jwt.encode(
-        {"user_id": existing_user.id, "role": existing_user.role},
+        {
+            "user_id": existing_user.id,
+            "role": existing_user.role,
+            "exp": datetime.now(timezone.utc)
+            + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        },
         secret_key,
         algorithm="HS256",
     )

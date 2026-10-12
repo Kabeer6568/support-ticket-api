@@ -1,17 +1,13 @@
 import os
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-from app.database import engine, Base
-from app.models.user import User
-from app.models.ticket import Ticket
-from app.models.comment import Comment
-from app.models.ticket_triage import TicketTriageResult
+from app.database import engine
 from app.routes.ai import router as ai_router
 
-
-Base.metadata.create_all(bind=engine)
 from app.routes import user
 from app.routes import ticket
 from app.routes.comment import router as comment_router
@@ -40,7 +36,8 @@ app.include_router(ticket.router)
 app.include_router(comment_router)
 app.include_router(ai_router)
 
-@app.get("/")
+
+@app.get("/health")
 def home():
     return {
         "message": "Support Ticket API is running"
@@ -59,3 +56,10 @@ def db_test():
             "message": "Database connection failed",
             "error": str(e)
         }
+
+
+app.mount(
+    "/",
+    StaticFiles(directory=Path(__file__).resolve().parent.parent / "frontend", html=True),
+    name="frontend",
+)

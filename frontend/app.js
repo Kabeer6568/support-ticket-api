@@ -1,6 +1,9 @@
 "use strict";
 
-const DEFAULT_API_URL = "http://127.0.0.1:8000";
+const DEFAULT_API_URL = location.protocol === "file:"
+  || (["localhost", "127.0.0.1"].includes(location.hostname) && location.port === "5500")
+  ? "http://127.0.0.1:8000"
+  : location.origin;
 const PAGE_SIZE = 10;
 const STATUS_LABELS = {
   pending: "Pending",
@@ -147,7 +150,7 @@ async function checkApi() {
   try {
     setApiUrl(byId("api-url").value);
     stateLine.lastChild.textContent = " Checking connection…";
-    await request("/");
+    await request("/health");
     const database = await request("/db-test");
     if (database.message !== "Database connection successful") {
       throw new Error("The API is reachable, but the database connection failed.");

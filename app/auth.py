@@ -12,13 +12,22 @@ secret_key = os.getenv("SECRET_KEY")
 if not secret_key:
     raise RuntimeError("SECRET_KEY is not set. Add it to your .env file.")
 
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+if ACCESS_TOKEN_EXPIRE_MINUTES < 1:
+    raise RuntimeError("ACCESS_TOKEN_EXPIRE_MINUTES must be at least 1.")
+
 
 def verify_token(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
     token = credentials.credentials
     try:
-        payload = jwt.decode(token, secret_key, algorithms=["HS256"])
+        payload = jwt.decode(
+            token,
+            secret_key,
+            algorithms=["HS256"],
+            options={"require": ["exp", "user_id", "role"]},
+        )
         return payload
     except jwt.InvalidTokenError as exc:
         raise HTTPException(

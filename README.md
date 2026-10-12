@@ -1,8 +1,8 @@
 # Support Ticket API
 
-A production-style customer support ticket management backend built with **Python and FastAPI**.
-
-This project is being built from scratch as a practical backend engineering project. The goal is to learn Python backend development by building something that resembles a real business application rather than a collection of small tutorials.
+A customer support ticket application built with **Python, FastAPI, SQLAlchemy,
+PostgreSQL, and a plain HTML/CSS/JavaScript frontend**. It supports customer,
+support-agent, and administrator roles, with AI-assisted ticket triage.
 
 ## What This Project Does
 
@@ -17,8 +17,7 @@ The system allows customers/users to create and manage support tickets, while ad
 * View personal tickets
 * View individual ticket details
 * Reply to tickets
-* View ticket status
-* View ticket priority
+* View ticket status and conversation history
 
 ### Admin Features
 
@@ -26,7 +25,6 @@ The system allows customers/users to create and manage support tickets, while ad
 * View all tickets
 * Filter tickets
 * Change ticket status
-* Change ticket priority
 * Reply to users
 * Assign/manage tickets
 * Browse and filter a paginated directory of customers, support agents, and admins
@@ -50,33 +48,20 @@ The system allows customers/users to create and manage support tickets, while ad
 * Password hashing
 * Role-based access control
 
-### Additional Tools
+### AI
 
-* Redis
-* Docker
-* Git/GitHub
-
-### Future AI Features
-
-After the core ticket system is completed, an AI-powered support feature will be added.
-
-The AI functionality may include:
-
-* Answering common support questions
-* Searching a knowledge base
-* RAG (Retrieval-Augmented Generation)
-* Creating or escalating tickets
-* Summarizing ticket conversations
-* AI-assisted admin responses
+Gemini reviews each new ticket. It resolves only sufficiently confident, low-risk
+requests; urgent, sensitive, uncertain, or failed AI requests are escalated for
+human support.
 
 ## How the Application Works
 
 A user or frontend application sends an HTTP request to the FastAPI backend.
 
-Example:
+For example, ticket creation uses:
 
 ```text
-POST /tickets
+POST /ticket
 ```
 
 The backend receives the request and processes it.
@@ -100,55 +85,41 @@ For example, when a user creates a ticket:
 ```text
 User
  ↓
-POST /tickets
+POST /ticket
  ↓
-FastAPI receives ticket data
+Validate request and authenticate user
  ↓
-Validate the data
+Save ticket and run AI triage
  ↓
-Check authenticated user
+Resolve or escalate/assign to an agent
  ↓
-Save ticket in PostgreSQL
- ↓
-Return ticket information as JSON
+Return the ticket and triage result
 ```
 
 ## Example API
 
-A future endpoint might look like:
+Ticket routes include:
 
 ```text
-GET /tickets
+GET /ticket?page=1&limit=10
 ```
 
 and return:
 
 ```json
-[
-    {
-        "id": 1,
-        "subject": "Unable to login",
-        "status": "open",
-        "priority": "high"
-    }
-]
+{"items": [], "page": 1, "limit": 10, "total": 0}
 ```
 
 Another endpoint:
 
 ```text
-GET /tickets/1
+GET /ticket/1
 ```
 
 could return:
 
 ```json
-{
-    "id": 1,
-    "subject": "Unable to login",
-    "status": "open",
-    "priority": "high"
-}
+{"id": 1, "title": "Unable to login", "desc": "…", "status": "open", "user_id": 1, "assigned_to": 2}
 ```
 
 ## Frontend
@@ -163,6 +134,43 @@ current user-facing features:
   uncertain, or AI-unavailable cases are assigned to a randomly selected support agent
 * Admin ticket assignment, deletion, user-role changes, and a paginated directory of customers, support agents, and admins
 * Configurable API URL, database health check, and admin-access check
+
+## Setup
+
+Use Python 3.10 or newer and a PostgreSQL database. Create a `.env` file in the
+repository root with `DATABASE_URL` and a strong `SECRET_KEY`. Set
+`GEMINI_API_KEY` to enable AI triage; without it, tickets safely fall back to
+human escalation. Set `ACCESS_TOKEN_EXPIRE_MINUTES` to change the access-token
+lifetime; it defaults to 60 minutes. Keep `.env` private and do not commit it.
+
+Create a virtual environment and install the application dependencies from the
+repository root:
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+For an existing database created by an earlier version of this application,
+record the existing schema baseline before running the role cleanup migration:
+
+```powershell
+.\.venv\Scripts\alembic.exe stamp 0001_initial_schema
+.\.venv\Scripts\alembic.exe upgrade head
+```
+
+Only stamp the baseline if the existing database already has the current
+application tables (`users`, `tickets`, `comments`, and `ticket_triage_results`).
+The upgrade backfills empty/missing user roles to `user` and enforces valid,
+non-null roles. For a new database, run migrations without stamping:
+
+```powershell
+.\.venv\Scripts\alembic.exe upgrade head
+```
+
+The application no longer creates or alters tables at startup; apply migrations
+before starting the API. Tokens issued before expiration was introduced do not
+contain an expiry and must be replaced by signing in again.
 
 Start the API from the repository root:
 
@@ -211,46 +219,79 @@ issues, low-confidence results, invalid AI output, and provider failures are
 escalated. Escalated tickets are marked `open` and randomly assigned to a
 registered `support_agent`. If no support agents exist, the ticket remains open
 and an administrator is told to assign it. AI triage results are stored in the
-`ticket_triage_results` table, which is created automatically at startup.
+`ticket_triage_results` table.
+
+## Deploying publicly on Vercel
+
+The FastAPI application serves the static frontend from the same origin, so the
+frontend can call the API without a separate CORS origin. Vercel's Python
+runtime detects `app/main.py` as the FastAPI entry point and serves the mounted
+frontend alongside the API.
+
+1. Push this repository to GitHub and import it into Vercel with the repository
+   root as the project root.
+2. Add a PostgreSQL database through the Vercel Marketplace (Neon has a
+   permanent free plan). Use its pooled PostgreSQL connection URL for serverless
+   access and configure that URL as `DATABASE_URL` in Vercel's project
+   environment variables.
+3. Add `SECRET_KEY` and `GEMINI_API_KEY` as Vercel environment variables.
+   Generate a long, random secret key; do not reuse the example or commit any
+   real secret. `GEMINI_API_KEY` is optional; without it, ticket creation falls
+   back to human escalation. Optionally set `ACCESS_TOKEN_EXPIRE_MINUTES`.
+4. Apply migrations to the Neon database before deploying the application:
+
+   ```powershell
+   $env:DATABASE_URL = "your Neon pooled PostgreSQL connection URL"
+   .\.venv\Scripts\python.exe -m alembic upgrade head
+   ```
+
+   Run this only for a new, empty database. If migrating an existing database,
+   follow the existing-database baseline instructions above instead.
+5. Deploy from Vercel. Visit the deployment URL and use **Check API + DB** to
+   verify connectivity.
+
+Set `FRONTEND_ORIGINS` in Vercel only if another, separate website origin will
+call the API; same-origin requests from the Vercel-hosted frontend do not need
+CORS. Never paste database URLs or API keys into chat, source control, or
+public build logs.
+
+## Tests
+
+Install development dependencies and run the API and migration tests:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pytest
+```
+
+The tests use an isolated in-memory SQLite database and do not contact the
+configured PostgreSQL database or Gemini.
 
 ## Project Architecture
 
-As the project grows, the code will be separated into different responsibilities.
-
-The planned structure is:
+The current project structure is:
 
 ```text
 support-ticket-api/
 │
 ├── app/
 │   ├── main.py
-│   │
-│   ├── api/
-│   │   └── routes/
-│   │
+│   ├── auth.py
+│   ├── database.py
+│   ├── ai/
 │   ├── models/
-│   │
-│   ├── schemas/
-│   │
-│   ├── services/
-│   │
-│   ├── repositories/
-│   │
-│   ├── core/
-│   │
-│   └── db/
-│
+│   ├── routes/
+│   └── schemas/
+├── frontend/
+├── migrations/
 ├── tests/
-│
+├── alembic.ini
 ├── .env
 ├── .gitignore
 ├── requirements.txt
+├── requirements-dev.txt
 └── README.md
 ```
-
-We will **not create all of these folders immediately**.
-
-They will be introduced as the application becomes more complex, so each architectural decision has a purpose.
 
 ## Main Concepts We Will Learn
 
@@ -285,70 +326,18 @@ While building this project, we will learn:
 * API documentation
 * Deployment
 
-## Development Roadmap
+## Current Status
 
-### Phase 1 — Basic API
+Implemented:
 
-* FastAPI setup
-* Project structure
-* Routes
-* Request/response
-* Pydantic
+* Registration, password hashing, expiring JWT authentication, and role-based access
+* Customer and support-agent ticket workflows, comments, assignment, and status updates
+* Admin ticket management and user directory
+* Gemini ticket triage with human escalation and provider-failure fallback
+* Alembic schema migrations and focused automated API/migration tests
 
-### Phase 2 — Database
-
-* PostgreSQL
-* SQLAlchemy
-* Users table
-* Tickets table
-* Replies table
-* Relationships
-* Migrations
-
-### Phase 3 — Authentication
-
-* Registration
-* Login
-* Password hashing
-* JWT
-* Protected routes
-* User/admin roles
-
-### Phase 4 — Ticket System
-
-* Create tickets
-* View tickets
-* Update tickets
-* Ticket status
-* Ticket priority
-* Replies
-* Admin management
-
-### Phase 5 — Production Features
-
-* Validation
-* Error handling
-* Logging
-* Testing
-* Redis
-* Background tasks
-
-### Phase 6 — Deployment
-
-* Docker
-* Linux
-* Environment configuration
-* Production server
-* Deployment
-
-### Phase 7 — AI Integration
-
-* LLM API
-* Prompting
-* Embeddings
-* Vector search
-* RAG
-* AI support assistant
+Redis, background processing, knowledge-base search/RAG, and deployment setup
+are not currently implemented.
 
 ## Goal
 
@@ -356,8 +345,5 @@ The goal is not simply to say:
 
 > "I know Python."
 
-The goal is to be able to say:
-
-> "I can build and maintain a backend application using Python, FastAPI, PostgreSQL, authentication, caching, Docker, and external APIs."
-
-The project will be built incrementally so that every major component is understood rather than blindly generated by AI.
+The goal is to build and maintain a backend application using Python, FastAPI,
+PostgreSQL, authentication, migrations, automated tests, and an external AI API.
